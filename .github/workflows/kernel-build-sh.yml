@@ -55,6 +55,12 @@ jobs:
       - name: Make build script executable
         run: |
           chmod +x build_kernel.sh || true
+      - name: Provide missing prebuilt python3
+        run: |
+          set -euxo pipefail
+          mkdir -p kernel/prebuilts/build-tools/path/linux-x86
+          ln -sf /usr/bin/python3 kernel/prebuilts/build-tools/path/linux-x86/python3
+          ls -l kernel/prebuilts/build-tools/path/linux-x86/python3
 
       - name: Run build_kernel.sh
         env:
