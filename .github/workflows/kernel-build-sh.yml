@@ -25,14 +25,15 @@ jobs:
 
       - name: Prepare prebuilts
         run: |
-          set -euxo pipefail
-          curl -L https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64 -o bazel
-          chmod +x bazel
-          sudo mv bazel /usr/local/bin/bazel
-          mkdir -p kernel/prebuilts/build-tools/path/linux-x86
-          ln -sf /usr/bin/python3 kernel/prebuilts/build-tools/path/linux-x86/python3
-          mkdir -p kernel/prebuilts/kernel-build-tools/bazel/linux-x86_64
-          ln -sf /usr/local/bin/bazel kernel/prebuilts/kernel-build-tools/bazel/linux-x86_64/bazel
+         set -euxo pipefail
+         curl -L https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64 -o bazel
+         chmod +x bazel
+         sudo mv bazel /usr/local/bin/bazel
+         echo "8.4.0" > kernel/.bazelversion
+         mkdir -p kernel/prebuilts/build-tools/path/linux-x86
+         ln -sf /usr/bin/python3 kernel/prebuilts/build-tools/path/linux-x86/python3
+         mkdir -p kernel/prebuilts/kernel-build-tools/bazel/linux-x86_64
+         ln -sf /usr/local/bin/bazel kernel/prebuilts/kernel-build-tools/bazel/linux-x86_64/bazel
 
       - name: Run build
         env:
