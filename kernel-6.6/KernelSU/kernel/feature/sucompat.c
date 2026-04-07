@@ -11,6 +11,7 @@
 #include <linux/version.h>
 #include <linux/sched/task_stack.h>
 #include <linux/ptrace.h>
+#include <linux/susfs_def.h>
 
 #include "policy/allowlist.h"
 #include "policy/feature.h"
