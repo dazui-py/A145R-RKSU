@@ -90,26 +90,22 @@ int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
     return 0;
 }
 
-int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
+int ksu_handle_stat(int *dfd, struct filename **filename, int *flags)
 {
-    // const char sh[] = SH_PATH;
     const char su[] = SU_PATH;
 
     if (!ksu_is_allow_uid_for_current(current_uid().val)) {
         return 0;
     }
 
-    if (unlikely(!filename_user)) {
+    if (unlikely(!filename || IS_ERR(*filename) || !(*filename)->name)) {
         return 0;
     }
 
-    char path[sizeof(su) + 1];
-    memset(path, 0, sizeof(path));
-    strncpy_from_user_nofault(path, *filename_user, sizeof(path));
-
-    if (unlikely(!memcmp(path, su, sizeof(su)))) {
-        pr_info("newfstatat su->sh!\n");
-        *filename_user = sh_user_path();
+    if (unlikely(!memcmp((*filename)->name, su, sizeof(su)))) {
+        pr_info("newfstatat su->sh!
+");
+        memcpy((void *)(*filename)->name, SH_PATH, sizeof(SH_PATH));
     }
 
     return 0;
