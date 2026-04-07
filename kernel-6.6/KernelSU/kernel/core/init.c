@@ -20,6 +20,7 @@
 #include "ksu.h"
 #include "infra/file_wrapper.h"
 #include "selinux/selinux.h"
+#include "hook/syscall_hook.h"
 #include "hook/setuid_hook.h"
 #include "feature/sucompat.h"
 
@@ -97,7 +98,7 @@ int __init kernelsu_init(void)
 
     ksu_setuid_hook_init();
 
-    ksu_sulog_init();
+    // ksu_sulog_init();
 
     ksu_allowlist_init();
 
