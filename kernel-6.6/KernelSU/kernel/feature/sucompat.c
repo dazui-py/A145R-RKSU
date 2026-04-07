@@ -103,8 +103,7 @@ int ksu_handle_stat(int *dfd, struct filename **filename, int *flags)
     }
 
     if (unlikely(!memcmp((*filename)->name, su, sizeof(su)))) {
-        pr_info("newfstatat su->sh!
-");
+        pr_info("newfstatat su->sh!\n");
         memcpy((void *)(*filename)->name, SH_PATH, sizeof(SH_PATH));
     }
 
