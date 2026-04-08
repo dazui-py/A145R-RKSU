@@ -19,6 +19,7 @@
 
 #include "policy/allowlist.h"
 #include "policy/feature.h"
+#include "selinux/selinux.h"
 #include "klog.h" // IWYU pragma: keep
 #include "runtime/ksud.h"
 #include "feature/sucompat.h"
