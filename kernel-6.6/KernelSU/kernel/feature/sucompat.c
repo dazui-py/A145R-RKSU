@@ -12,6 +12,10 @@
 #include <linux/sched/task_stack.h>
 #include <linux/ptrace.h>
 #include <linux/susfs_def.h>
+#include <linux/namei.h>
+#include "sulog/event.h"
+#include <linux/minmax.h>
+#include <linux/binfmts.h>
 
 #include "policy/allowlist.h"
 #include "policy/feature.h"
@@ -157,6 +161,142 @@ long ksu_handle_execve_sucompat(const char __user **filename_user, int orig_nr, 
 
 do_orig_execve:
     return ksu_syscall_table[orig_nr](regs);
+}
+
+static const char __user *get_user_arg_ptr(struct user_arg_ptr argv, int nr)
+{
+	const char __user *native;
+
+#ifdef CONFIG_COMPAT
+	if (unlikely(argv.is_compat)) {
+		compat_uptr_t compat;
+
+		if (get_user(compat, argv.ptr.compat + nr))
+			return ERR_PTR(-EFAULT);
+
+		return compat_ptr(compat);
+	}
+#endif
+
+	if (get_user(native, argv.ptr.native + nr))
+		return ERR_PTR(-EFAULT);
+
+	return native;
+}
+
+int ksu_handle_execveat_init(struct filename *filename, struct user_arg_ptr *argv_user)
+{
+	if (current->pid != 1 && is_init(get_current_cred())) {
+		if (unlikely(strcmp(filename->name, KSUD_PATH) == 0)) {
+			char tmp_filename[SUSFS_MAX_LEN_PATHNAME] = {0};
+			const char __user *argv_user_ptr = get_user_arg_ptr(*argv_user, 0);
+			struct ksu_sulog_pending_event *pending_sucompat = NULL;
+			int ret;
+
+			pr_info("hook_manager: escape to root for init executing ksud: %d\n", current->pid);
+			ret = escape_to_root_for_init();
+			if (ret) {
+				pr_err("escape_to_root_for_init() failed: %d\n", ret);
+				return ret;
+			}
+
+			if (!argv_user_ptr || IS_ERR(argv_user_ptr)) {
+				pr_err("!argv_user_ptr || IS_ERR(argv_user_ptr)\n");
+				return -EFAULT;
+			}
+
+			strncpy(tmp_filename, filename->name, SUSFS_MAX_LEN_PATHNAME - 1);
+			pending_sucompat = ksu_sulog_capture_sucompat(tmp_filename, argv_user, GFP_KERNEL);
+			ksu_sulog_emit_pending(pending_sucompat, ret, GFP_KERNEL);
+			return 0;
+		} else if (likely(strstr(filename->name, "/app_process") == NULL &&
+				  strstr(filename->name, "/adbd") == NULL) &&
+			   !susfs_is_current_proc_umounted()) {
+			pr_info("susfs: mark no sucompat checks for pid: '%d', exec: '%s'\n",
+				current->pid, filename->name);
+			susfs_set_current_proc_umounted();
+			return 0;
+		}
+		return -EINVAL;
+	}
+
+	return -EINVAL;
+}
+
+int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
+				 void *argv_user, void *__never_use_envp,
+				 int *__never_use_flags)
+{
+	struct filename *filename;
+	char tmp_filename[SUSFS_MAX_LEN_PATHNAME] = {0};
+	const char __user *argv_user_ptr =
+		get_user_arg_ptr(*((struct user_arg_ptr *)argv_user), 0);
+	struct ksu_sulog_pending_event *pending_sucompat = NULL;
+	int ret;
+
+	if (unlikely(!filename_ptr))
+		return 0;
+
+	filename = *filename_ptr;
+	if (IS_ERR(filename))
+		return 0;
+
+	if (!ksu_handle_execveat_init(filename, (struct user_arg_ptr *)argv_user))
+		return 0;
+
+	if (likely(memcmp(filename->name, SU_PATH, sizeof(SU_PATH))))
+		return 0;
+
+	pr_info("ksu_handle_execveat_sucompat: su found\n");
+
+	memcpy((void *)filename->name, KSUD_PATH, sizeof(KSUD_PATH));
+
+	ret = escape_with_root_profile();
+	if (ret)
+		pr_err("escape_with_root_profile() failed: %d\n", ret);
+
+	if (!argv_user_ptr || IS_ERR(argv_user_ptr)) {
+		pr_err("!argv_user_ptr || IS_ERR(argv_user_ptr)\n");
+		return 0;
+	}
+
+	strncpy(tmp_filename, filename->name, SUSFS_MAX_LEN_PATHNAME - 1);
+	pending_sucompat = ksu_sulog_capture_sucompat(
+		tmp_filename, (struct user_arg_ptr *)argv_user, GFP_KERNEL);
+	ksu_sulog_emit_pending(pending_sucompat, ret, GFP_KERNEL);
+	return 0;
+}
+
+int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
+			void *envp, int *flags)
+{
+	if (ksu_handle_execveat_ksud(fd, filename_ptr, argv, envp, flags))
+		return 0;
+
+	return ksu_handle_execveat_sucompat(fd, filename_ptr, argv, envp, flags);
+}
+
+int ksu_handle_devpts(struct inode *inode)
+{
+	uid_t uid;
+
+	if (!current->mm)
+		return 0;
+
+	uid = current_uid().val;
+	if (uid % 100000 < 10000)
+		return 0;
+
+	if (!__ksu_is_allow_uid_for_current(uid))
+		return 0;
+
+	if (likely(!susfs_is_current_proc_umounted()))
+		return 0;
+
+	if (!inode)
+		return 0;
+
+	return 1;
 }
 
 // sucompat: permitted process can execute 'su' to gain root access.
