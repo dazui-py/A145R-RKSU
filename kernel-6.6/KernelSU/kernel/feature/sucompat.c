@@ -13,13 +13,13 @@
 #include <linux/ptrace.h>
 #include <linux/susfs_def.h>
 #include <linux/namei.h>
-#include "sulog/event.h"
 #include <linux/minmax.h>
 #include <linux/binfmts.h>
 
 #include "policy/allowlist.h"
 #include "policy/feature.h"
 #include "selinux/selinux.h"
+#include "sulog/event.h"
 #include "klog.h" // IWYU pragma: keep
 #include "runtime/ksud.h"
 #include "feature/sucompat.h"
