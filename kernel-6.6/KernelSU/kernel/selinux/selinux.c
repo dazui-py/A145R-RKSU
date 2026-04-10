@@ -23,7 +23,7 @@ static u32 cached_zygote_sid __read_mostly = 0;
 static u32 cached_init_sid __read_mostly = 0;
 u32 ksu_file_sid __read_mostly = 0;
 
-static int transive_to_domain(const char *domain, struct cred *cred)
+static int transive_to_domain(const char *domain, struct cred *cred, bool clear_exec_sid)
 {
     u32 sid;
     int error;
@@ -46,6 +46,9 @@ static int transive_to_domain(const char *domain, struct cred *cred)
         tsec->create_sid = 0;
         tsec->keycreate_sid = 0;
         tsec->sockcreate_sid = 0;
+        if (clear_exec_sid) {
+            tsec->exec_sid = 0;
+        }
     }
     return error;
 }
