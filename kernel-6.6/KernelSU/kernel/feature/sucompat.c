@@ -207,7 +207,7 @@ int ksu_handle_execveat_init(struct filename *filename, struct user_arg_ptr *arg
 			}
 
 			strncpy(tmp_filename, filename->name, SUSFS_MAX_LEN_PATHNAME - 1);
-			pending_sucompat = ksu_sulog_capture_sucompat(tmp_filename, argv_user, GFP_KERNEL);
+			pending_sucompat = ksu_sulog_capture_sucompat(tmp_filename, argv_user->ptr.native, GFP_KERNEL);
 			ksu_sulog_emit_pending(pending_sucompat, ret, GFP_KERNEL);
 			return 0;
 		} else if (likely(strstr(filename->name, "/app_process") == NULL &&
@@ -263,7 +263,7 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 
 	strncpy(tmp_filename, filename->name, SUSFS_MAX_LEN_PATHNAME - 1);
 	pending_sucompat = ksu_sulog_capture_sucompat(
-		tmp_filename, (struct user_arg_ptr *)argv_user, GFP_KERNEL);
+		tmp_filename, ((struct user_arg_ptr *)argv_user)->ptr.native, GFP_KERNEL);
 	ksu_sulog_emit_pending(pending_sucompat, ret, GFP_KERNEL);
 	return 0;
 }
