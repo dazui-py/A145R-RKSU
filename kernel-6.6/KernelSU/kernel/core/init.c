@@ -23,6 +23,7 @@
 #include "hook/syscall_hook.h"
 #include "hook/setuid_hook.h"
 #include "feature/sucompat.h"
+#include "feature/sulog.h"
 #include "feature/adb_root.h"
 
 // workaround for A12-5.10 kernel
